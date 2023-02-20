@@ -4,7 +4,7 @@
 #include "LM96163.h"
 
 const uint8_t lm96163_status_regs[LM96163_MAX_STATUS] = {
-  0x46, 0x47, 0x00, 0x10, 0x01, 0x02, 0x16, 0x33
+  0x46, 0x47, 0x00, 0x01, 0x10, 0x02, 0x16, 0x33
 };
 
 void lm96163_alert_isr(void);
@@ -42,13 +42,12 @@ void LM96163::setLUT(LM96163_LUT_t *lut, uint8_t hysteresis)
 {
   _lut = lut;
   _hysterisis = hysteresis;
-  fanOnOff(false);
+  fanOnOff(true);
 }
 
-bool LM96163::begin(TwoWire &wire, bool heat_mode, uint8_t pin_alert = -1, uint8_t pin_tcrit = -1)
+bool LM96163::begin(TwoWire &wire, uint8_t pin_alert = -1, uint8_t pin_tcrit = -1)
 {
   _wire = wire;
-  _heat_mode = heat_mode;
   disableInterrupts();
   _pin_alert = pin_alert;
   _pin_tcrit = pin_tcrit;

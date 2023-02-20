@@ -2,6 +2,7 @@
 #define __LM96163_h_
 
 #include <Arduino.h>
+#include <Wire.h>
 
 // This is a highlander chip... There can only be one...
 #define I2C_ADDR_LM96163  0x4C
@@ -17,8 +18,8 @@ enum {
   LM96163_STATUS_TACH_MSB,
   LM96163_STATUS_LOCAL_TEMP,
   LM96163_STATUS_REMOTE_TEMP,
-  LM96163_STATUS_REMOTE_TEMP_LSB = LM96163_STATUS_REMOTE_TEMP,
-  LM96163_STATUS_REMOTE_TEMP_MSB,
+  LM96163_STATUS_REMOTE_TEMP_MSB = LM96163_STATUS_REMOTE_TEMP,
+  LM96163_STATUS_REMOTE_TEMP_LSB,
   LM96163_STATUS_ALERT_STATUS,
   LM96163_STATUS_ALERT_MASK,
   LM96163_STATUS_POR_STATUS,
@@ -33,7 +34,7 @@ class LM96163
     LM96163();
     ~LM96163();
     void setLUT(LM96163_LUT_t *lut, uint8_t hysteresis = 10);
-    bool begin(TwoWire &wire, bool heat_mode, uint8_t pin_alert = -1, uint8_t pin_tcrit = -1);
+    bool begin(TwoWire &wire, uint8_t pin_alert = -1, uint8_t pin_tcrit = -1);
 
     void enableInterrupts(void);
     void disableInterrupts(void);
@@ -46,7 +47,6 @@ class LM96163
   protected:
     bool _initialized;
     TwoWire &_wire;
-    bool _heat_mode;
     uint8_t _alert_pin;
     uint8_t _alert_mask;
     uint8_t _tcrit_pin;
