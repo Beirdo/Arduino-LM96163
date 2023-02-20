@@ -34,7 +34,7 @@ class LM96163
     LM96163();
     ~LM96163();
     void setLUT(LM96163_LUT_t *lut, uint8_t hysteresis = 10);
-    bool begin(TwoWire &wire, uint8_t pin_alert = -1, uint8_t pin_tcrit = -1);
+    bool begin(TwoWire *wire, uint8_t pin_alert = -1, uint8_t pin_tcrit = -1);
 
     void enableInterrupts(void);
     void disableInterrupts(void);
@@ -43,10 +43,13 @@ class LM96163
     void pollStatus(void);
     uint16_t getStatus(int index);
     void setPulsePerRev(uint8_t value);
+    
+    friend void lm96163_alert_isr(void);
 
   protected:
+    void setAlertStatus(uint8_t status) { _status[LM96163_STATUS_ALERT_STATUS] = status; };
     bool _initialized;
-    TwoWire &_wire;
+    TwoWire *_wire;
     uint8_t _alert_pin;
     uint8_t _alert_mask;
     uint8_t _tcrit_pin;
@@ -55,7 +58,7 @@ class LM96163
     uint8_t _hysteresis;
     bool _on;
     bool _interrupts_on;
-    uint8_t _override_pwm;
+    uint8_t _pwm_override;
     uint8_t _status[LM96163_MAX_STATUS];
     uint8_t _pulse_per_rev;
 

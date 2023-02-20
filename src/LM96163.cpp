@@ -11,14 +11,15 @@ void lm96163_alert_isr(void);
 
 void lm96163_alert_isr(void)
 {
-  _status[LM96163_STATUS_ALERT_STATUS] = read_register(0x02);
+  lm96163.setAlertStatus(lm96163.read_register(0x02));
 }
 
 LM96163::LM96163()
 {
+  _wire = 0;
   _lut = 0;
-  _pin_alert = -1;
-  _pin_tcrit = -1;
+  _alert_pin = -1;
+  _tcrit_pin = -1;
   _on = false;
   _pwm_override = 0;
   _interrupts_on = false;
@@ -41,25 +42,25 @@ void LM96163::setPulsePerRev(uint8_t value)
 void LM96163::setLUT(LM96163_LUT_t *lut, uint8_t hysteresis)
 {
   _lut = lut;
-  _hysterisis = hysteresis;
+  _hysteresis = hysteresis;
   fanOnOff(true);
 }
 
-bool LM96163::begin(TwoWire &wire, uint8_t pin_alert = -1, uint8_t pin_tcrit = -1)
+bool LM96163::begin(TwoWire *wire, uint8_t pin_alert, uint8_t pin_tcrit)
 {
   _wire = wire;
   disableInterrupts();
-  _pin_alert = pin_alert;
-  _pin_tcrit = pin_tcrit;
+  _alert_pin = pin_alert;
+  _tcrit_pin = pin_tcrit;
 
-  _wire.begin();
+  _wire->begin();
   return configure();
 }
 
 bool LM96163::configure(bool fast)
 {
-  _wire.beginTransmission(I2C_ADDR_LM96163);
-  _initialized  = (_wire.endTransmission() == 0);
+  _wire->beginTransmission(I2C_ADDR_LM96163);
+  _initialized  = (_wire->endTransmission() == 0);
 
   if (!_initialized) {
     return false;
@@ -102,7 +103,7 @@ bool LM96163::configure(bool fast)
 
       // Turn on the LUT use
       pwm_control &= 0x1B;
-      write_register(0x4A, pwm_control;
+      write_register(0x4A, pwm_control);
       return true;
     }
   }
@@ -114,7 +115,7 @@ bool LM96163::configure(bool fast)
   if (!_on) {
     _pwm_override = 0;
   }
-  write_register(0x4C. _pwm_override);
+  write_register(0x4C, _pwm_override);
   return true;
 }
 
@@ -138,15 +139,15 @@ void LM96163::disableInterrupts(void)
   _interrupts_on = false;
 }
 
-void LM96163:;setAlertMask(uint8_t value)
+void LM96163::setAlertMask(uint8_t value)
 {
   write_register(0x16, value);
 }
 
-void LM96163:;fanOnOff(bool on, uint8_t override_pwm)
+void LM96163::fanOnOff(bool on, uint8_t override_pwm)
 {
   _on = on;
-  _override_pwm = override_pwm;
+  _pwm_override = override_pwm;
 
   if (!_initialized) {
     return;
@@ -155,9 +156,9 @@ void LM96163:;fanOnOff(bool on, uint8_t override_pwm)
   configure(true);
 }
 
-void LM96163:;pollStatus(void)
+void LM96163::pollStatus(void)
 {
-  for (i = 0; i < LM96163_MAX_STATUS; i++ ) {
+  for (int i = 0; i < LM96163_MAX_STATUS; i++ ) {
     _status[i] = read_register(lm96163_status_regs[i]);
   }
 
@@ -166,14 +167,14 @@ void LM96163:;pollStatus(void)
   if (tach == 0xFFFF || tach == 0x0000) {
     tach = 0x0000;
   } else {
-    tach = (uint16_t)(10800000 / (int)(_pulse_per_count * tach));
+    tach = (uint16_t)(10800000 / (int)(_pulse_per_rev * tach));
   }
 
-  _status[LM96164_STATUS_TACH_LSB] = (uint8_t)(tach & 0x00FF);
-  _status[LM96164_STATUS_TACH_MSB] = (uint8_t)((tach >> 8) & 0x00FF);
+  _status[LM96163_STATUS_TACH_LSB] = (uint8_t)(tach & 0x00FF);
+  _status[LM96163_STATUS_TACH_MSB] = (uint8_t)((tach >> 8) & 0x00FF);
 }
 
-uint16_t LM96163:;getStatus(int index)
+uint16_t LM96163::getStatus(int index)
 {
   if (index < 0 || index >= LM96163_MAX_STATUS) {
     return 0;
@@ -183,7 +184,7 @@ uint16_t LM96163:;getStatus(int index)
     return (uint16_t)_status[index] | ((uint16_t)_status[index + 1] << 8);
   }
 
-  return (uint16_t)status[index];
+  return (uint16_t)_status[index];
 }
 
 void LM96163::write_register(uint8_t regnum, uint8_t value)
@@ -192,10 +193,10 @@ void LM96163::write_register(uint8_t regnum, uint8_t value)
     return;
   }
 
-  _wire.beginTransmission(I2C_ADDR_LM96163);
-  _wire.write(regnum);
-  _wire.write(value);
-  _wire.endTransmission();
+  _wire->beginTransmission(I2C_ADDR_LM96163);
+  _wire->write(regnum);
+  _wire->write(value);
+  _wire->endTransmission();
 }
 
 uint8_t LM96163::read_register(uint8_t regnum)
@@ -204,12 +205,14 @@ uint8_t LM96163::read_register(uint8_t regnum)
     return 0x00;
   }
 
-  _wire.beginTransmission(I2C_ADDR_LM96163);
-  _wire.write(regnum);
-  _wire.endTransmission(false);
+  _wire->beginTransmission(I2C_ADDR_LM96163);
+  _wire->write(regnum);
+  _wire->endTransmission(false);
   
-  _wire.requestFrom(I2C_ADDR_LM96163, 1);
+  _wire->requestFrom(I2C_ADDR_LM96163, 1);
 
-  return _wire.read();
+  return _wire->read();
 }
 
+
+LM96163 lm96163;
